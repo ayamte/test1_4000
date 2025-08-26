@@ -8,8 +8,6 @@ import {
 } from "react-icons/md"        
 import "./gestionClient.css"             
 import { clientService } from '../../../services/clientService'  
-// ✅ SUPPRIMER l'import CityRegionSelector
-// import CityRegionSelector from '../../../components/common/CityRegionSelector';  
   
 export default function ClientManagement() {      
   const [searchTerm, setSearchTerm] = useState("")      
@@ -19,10 +17,7 @@ export default function ClientManagement() {
   const [editingClient, setEditingClient] = useState(null)      
   const [loading, setLoading] = useState(true)    
   const [error, setError] = useState("")    
-  const [isLoading, setIsLoading] = useState(false)  
-  // ✅ SUPPRIMER les états pour les sélecteurs de ville et région
-  // const [selectedCity, setSelectedCity] = useState('');  
-  // const [selectedRegion, setSelectedRegion] = useState('');   
+  const [isLoading, setIsLoading] = useState(false)   
     
   const [formData, setFormData] = useState({      
     // Champs communs  
@@ -46,42 +41,47 @@ export default function ClientManagement() {
   })      
 
   // ✅ Fonction utilitaire corrigée - suppression des références aux régions
-  const transformClientData = (customers) => {  
-    return customers  
-      .filter(customer => {  
-        if (customer.type_client === 'PHYSIQUE' && customer.physical_user_id?.moral_user_id) {  
-          return false;  
-        }  
-        return true;  
-      })  
-      .map(customer => ({    
-        id: customer._id,    
-        nom: customer.physical_user_id ?     
-          `${customer.physical_user_id.first_name} ${customer.physical_user_id.last_name}` :    
-          customer.moral_user_id?.raison_sociale || 'N/A',    
-        type: customer.type_client === 'PHYSIQUE' ? 'Particulier' : 'Entreprise',    
-        telephone: customer.physical_user_id?.telephone_principal ||     
-                  customer.moral_user_id?.telephone_principal || 'N/A',    
-        // ✅ SUPPRIMER les références aux régions
-        // region: customer.physical_user_id?.region_principale?.nom ||     
-        //       customer.moral_user_id?.region_principale?.nom || 'N/A',    
-        email: customer.physical_user_id?.user_id?.email ||     
-              customer.moral_user_id?.user_id?.email || 'N/A',       
-        adresse: 'Voir adresses sauvegardées',
-        statut: customer.statut,    
-        city: 'Casablanca', // ✅ Ville par défaut
-        // Champs détaillés pour l'édition    
-        civilite: customer.physical_user_id?.civilite || '',    
-        prenom: customer.physical_user_id?.first_name || '',    
-        nom_seul: customer.physical_user_id?.last_name || '',    
-        ice: customer.moral_user_id?.ice || '',  
-        raison_sociale: customer.moral_user_id?.raison_sociale || '',  
-        patente: customer.moral_user_id?.patente || '',  
-        rc: customer.moral_user_id?.rc || '',  
-        ville_rc: customer.moral_user_id?.ville_rc || ''
-        // ✅ SUPPRIMER region_id et city_id car plus dans les modèles utilisateur
-      }));  
-  };
+const transformClientData = (customers) => {  
+  console.log("📊 Données brutes reçues:", customers);  
+    
+  return customers  
+    .filter(customer => {  
+      if (customer.type_client === 'PHYSIQUE' && customer.physical_user_id?.moral_user_id) {  
+        return false;  
+      }  
+      return true;  
+    })  
+    .map(customer => {  
+      console.log("🔍 Transformation du client:", customer);  
+        
+      const result = {  
+        id: customer.id,  
+        nom: customer.type_client === 'PHYSIQUE' ?   
+          // Pour les particuliers : prénom + nom  
+          (customer.user_info ? `${customer.user_info.first_name} ${customer.user_info.last_name}` : 'N/A') :  
+          // Pour les entreprises : raison sociale  
+          (customer.user_info?.raison_sociale || 'N/A'),  
+        type: customer.type_client === 'PHYSIQUE' ? 'Particulier' : 'Entreprise',  
+        telephone: customer.user_info?.telephone_principal || 'N/A',  
+        email: customer.user_info?.email || 'N/A',  
+        adresse: 'Voir adresses sauvegardées',  
+        statut: customer.statut,  
+        city: 'Casablanca',  
+        // Champs détaillés pour l'édition  
+        civilite: customer.user_info?.civilite || '',  
+        prenom: customer.user_info?.first_name || '',  
+        nom_seul: customer.user_info?.last_name || '',  
+        ice: customer.user_info?.ice || '',  
+        raison_sociale: customer.user_info?.raison_sociale || '',  
+        patente: customer.user_info?.patente || '',  
+        rc: customer.user_info?.rc || '',  
+        ville_rc: customer.user_info?.ville_rc || ''  
+      };  
+        
+      console.log("✅ Client transformé:", result);  
+      return result;  
+    });  
+};
     
   // Charger les clients depuis l'API    
   useEffect(() => {    

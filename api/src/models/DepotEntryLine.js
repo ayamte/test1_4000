@@ -9,7 +9,7 @@ const DepotEntryLineSchema = new mongoose.Schema({
   },  
   um_id: {   
     type: mongoose.Schema.Types.ObjectId,   
-    ref: 'UM',   
+    ref: 'Um',   
     required: true   
   },  
   bl_frs_id: {   

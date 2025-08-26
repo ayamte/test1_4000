@@ -335,7 +335,7 @@ function App() {
             <Route         
               path="/chauffeur/supplier-voucher"         
               element={        
-                <ProtectedRoute allowedRoles={['EMPLOYE']}>        
+                <ProtectedRoute allowedRoles={['EMPLOYE', 'EMPLOYE_MAGASIN']}>          
                   <SupplierVoucher />        
                 </ProtectedRoute>        
               }         
