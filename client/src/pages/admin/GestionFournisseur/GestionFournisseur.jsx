@@ -8,19 +8,27 @@ import {
   MdDelete as Delete,
   MdClose as X,
   MdPhone as Phone,
-  MdEmail as Email
+  MdEmail as Email,
+  MdExpandMore as ExpandMore,
+  MdExpandLess as ExpandLess
 } from "react-icons/md"
 import "./GestionFournisseur.css"
-import SidebarNavigation from '../../../components/admin/Sidebar/Sidebar'
 import fournisseurService from '../../../services/fournisseurService'
+import locationService from '../../../services/locationService'
 
 export default function GestionFournisseur() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false)
   const [fournisseurs, setFournisseurs] = useState([])
   const [editingFournisseur, setEditingFournisseur] = useState(null)
+  const [selectedFournisseur, setSelectedFournisseur] = useState(null)
+  const [expandedRows, setExpandedRows] = useState(new Set())
   const [loading, setLoading] = useState(true)
+  const [cities, setCities] = useState([])
+  const [loadingCities, setLoadingCities] = useState(false)
+  
   const [formData, setFormData] = useState({
     code: "",
     nom: "",
@@ -31,34 +39,48 @@ export default function GestionFournisseur() {
     actif: true
   })
 
-  // Charger les fournisseurs au montage du composant
+  const [addressFormData, setAddressFormData] = useState({
+    adresse: "",
+    ville_id: "",
+    code_postal: "",
+    type_adresse: "SIÈGE SOCIAL",
+    is_principal: false
+  })
+
+  // Charger les données au montage du composant
   useEffect(() => {
     loadFournisseurs()
+    loadCities()
   }, [])
 
-    const loadFournisseurs = async () => {  
+  const loadFournisseurs = async () => {  
     try {  
-        setLoading(true)  
-        console.log('Tentative de chargement des fournisseurs...')  
-        const response = await fournisseurService.getAllFournisseurs()  
-        console.log('Réponse reçue:', response)  
-        
-        if (response && response.success) {  
+      setLoading(true)  
+      const response = await fournisseurService.getAllFournisseurs()  
+      
+      if (response && response.success) {  
         setFournisseurs(response.data)  
-        console.log('Fournisseurs chargés:', response.data.length)  
-        } else {  
+      } else {  
         console.error('Erreur dans la réponse:', response)  
-        }  
+      }  
     } catch (error) {  
-        console.error("Erreur complète:", error)  
-        // Gérer les erreurs de votre service  
-        if (error.success === false) {  
-        console.error('Erreur API:', error.error)  
-        }  
+      console.error("Erreur complète:", error)  
     } finally {  
-        setLoading(false)  
+      setLoading(false)  
     }  
+  }
+
+  const loadCities = async () => {
+    try {
+      setLoadingCities(true)
+      const response = await locationService.getCities()
+      setCities(response.data || [])
+    } catch (error) {
+      console.error('Erreur chargement villes:', error)
+    } finally {
+      setLoadingCities(false)
     }
+  }
 
   // Filtrer les fournisseurs selon le terme de recherche
   const filteredFournisseurs = fournisseurs.filter(
@@ -66,8 +88,7 @@ export default function GestionFournisseur() {
       fournisseur.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
       fournisseur.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (fournisseur.ice && fournisseur.ice.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (fournisseur.email && fournisseur.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (fournisseur.ville_rc && fournisseur.ville_rc.toLowerCase().includes(searchTerm.toLowerCase()))
+      (fournisseur.email && fournisseur.email.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   // Calculer les statistiques
@@ -78,6 +99,13 @@ export default function GestionFournisseur() {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  const handleAddressInputChange = (field, value) => {
+    setAddressFormData((prev) => ({
       ...prev,
       [field]: value,
     }))
@@ -144,6 +172,40 @@ export default function GestionFournisseur() {
     }
   }
 
+  const handleAddAddress = (fournisseur) => {
+    setSelectedFournisseur(fournisseur)
+    resetAddressForm()
+    setIsAddressDialogOpen(true)
+  }
+
+  const handleAddressSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await fournisseurService.addAdresseFournisseur(
+        selectedFournisseur._id, 
+        addressFormData
+      )
+      if (response.success) {
+        await loadFournisseurs()
+        resetAddressForm()
+        setIsAddressDialogOpen(false)
+        setSelectedFournisseur(null)
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de l'adresse:", error)
+    }
+  }
+
+  const toggleRowExpansion = (fournisseurId) => {
+    const newExpanded = new Set(expandedRows)
+    if (newExpanded.has(fournisseurId)) {
+      newExpanded.delete(fournisseurId)
+    } else {
+      newExpanded.add(fournisseurId)
+    }
+    setExpandedRows(newExpanded)
+  }
+
   const resetForm = () => {
     setFormData({
       code: "",
@@ -153,6 +215,16 @@ export default function GestionFournisseur() {
       ville_rc: "",
       email: "",
       actif: true
+    })
+  }
+
+  const resetAddressForm = () => {
+    setAddressFormData({
+      adresse: "",
+      ville_id: "",
+      code_postal: "",
+      type_adresse: "SIÈGE SOCIAL",
+      is_principal: false
     })
   }
 
@@ -168,7 +240,7 @@ export default function GestionFournisseur() {
 
   return (
     <div className="fournisseur-management-layout">
-      <SidebarNavigation />
+
         
       <div className="fournisseur-management-wrapper">
         <div className="fournisseur-management-container">
@@ -236,7 +308,7 @@ export default function GestionFournisseur() {
                 <Search className="search-icon" />
                 <input
                   type="text"
-                  placeholder="Rechercher par nom, code, ICE, email ou ville..."
+                  placeholder="Rechercher par nom, code, ICE ou email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="search-input"
@@ -254,281 +326,452 @@ export default function GestionFournisseur() {
                   <table className="fournisseurs-table">
                     <thead>
                       <tr>
+                        <th></th>
                         <th>Code</th>
                         <th>Nom</th>
-                        <th>ICE</th>
-                        <th>RC</th>
-                        <th>Ville RC</th>
                         <th>Email</th>
                         <th>Statut</th>
+                        <th>Adresses</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredFournisseurs.map((fournisseur) => (
-                        <tr key={fournisseur._id}>
-                          <td className="font-medium">{fournisseur.code}</td>
-                          <td>{fournisseur.nom}</td>
-                          <td>{fournisseur.ice || '-'}</td>
-                          <td>{fournisseur.rc || '-'}</td>
-                          <td>{fournisseur.ville_rc || '-'}</td>
-                          <td>{fournisseur.email || '-'}</td>
-                          <td>{getStatutBadge(fournisseur.actif)}</td>
-                          <td>
-                            <div className="action-buttons">
+                        <>
+                          <tr key={fournisseur._id}>
+                            <td>
                               <button 
-                                className="edit-action-button"
-                                onClick={() => handleEdit(fournisseur)}
+                                className="expand-button"
+                                onClick={() => toggleRowExpansion(fournisseur._id)}
                               >
-                                <Edit className="action-icon" />
+                                {expandedRows.has(fournisseur._id) ? 
+                                  <ExpandLess className="expand-icon" /> : 
+                                  <ExpandMore className="expand-icon" />
+                                }
                               </button>
-                              <button 
-                                className="delete-action-button"
-                                onClick={() => handleDelete(fournisseur._id)}
-                              >
-                                <Delete className="action-icon" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {filteredFournisseurs.length === 0 && (
-                    <div className="no-results">
-                      Aucun fournisseur trouvé pour votre recherche.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal pour ajouter un fournisseur */}
-      {isAddDialogOpen && (
-        <div className="modal-overlay" onClick={() => setIsAddDialogOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Ajouter Fournisseur</h2>
-              <button className="modal-close" onClick={() => setIsAddDialogOpen(false)}>
-                <X className="close-icon" />
-              </button>
-            </div>
-                
-            <form onSubmit={handleAddSubmit} className="modal-form">
-              <div className="form-group">
-                <label htmlFor="code" className="form-label">Code fournisseur</label>
-                <input
-                  id="code"
-                  type="text"
-                  placeholder="Ex: FRS001"
-                  value={formData.code}
-                  onChange={(e) => handleInputChange("code", e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="nom" className="form-label">Nom du fournisseur</label>
-                <input
-                  id="nom"
-                  type="text"
-                  placeholder="Ex: Société ABC"
-                  value={formData.nom}
-                  onChange={(e) => handleInputChange("nom", e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="ice" className="form-label">ICE</label>
-                <input
-                  id="ice"
-                  type="text"
-                  placeholder="Ex: 123456789000123"
-                  value={formData.ice}
-                  onChange={(e) => handleInputChange("ice", e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="rc" className="form-label">Registre de commerce</label>
-                <input
-                  id="rc"
-                  type="text"
-                  placeholder="Ex: RC123456"
-                  value={formData.rc}
-                  onChange={(e) => handleInputChange("rc", e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="ville_rc" className="form-label">Ville RC</label>
-                <select
-                  id="ville_rc"
-                  value={formData.ville_rc}
-                  onChange={(e) => handleInputChange("ville_rc", e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Sélectionner une ville</option>
-                  <option value="Casablanca">Casablanca</option>
-                  <option value="Rabat">Rabat</option>
-                  <option value="Tanger">Tanger</option>
-                  <option value="Fès">Fès</option>
-                  <option value="Marrakech">Marrakech</option>
-                  <option value="Agadir">Agadir</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="Ex: contact@fournisseur.ma"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setIsAddDialogOpen(false)}>
-                  Annuler
-                </button>
-                <button type="submit" className="submit-button">
-                  Ajouter Fournisseur
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal pour modifier un fournisseur */}
-      {isEditDialogOpen && (
-        <div className="modal-overlay" onClick={() => setIsEditDialogOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Modifier Fournisseur</h2>
-              <button className="modal-close" onClick={() => setIsEditDialogOpen(false)}>
-                <X className="close-icon" />
-              </button>
-            </div>
-                
-            <form onSubmit={handleEditSubmit} className="modal-form">
-              <div className="form-group">
-                <label htmlFor="edit-code" className="form-label">Code fournisseur</label>
-                <input
-                  id="edit-code"
-                  type="text"
-                  placeholder="Ex: FRS001"
-                  value={formData.code}
-                  onChange={(e) => handleInputChange("code", e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-nom" className="form-label">Nom du fournisseur</label>
-                <input
-                  id="edit-nom"
-                  type="text"
-                  placeholder="Ex: Société ABC"
-                  value={formData.nom}
-                  onChange={(e) => handleInputChange("nom", e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-ice" className="form-label">ICE</label>
-                <input
-                  id="edit-ice"
-                  type="text"
-                  placeholder="Ex: 123456789000123"
-                  value={formData.ice}
-                  onChange={(e) => handleInputChange("ice", e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-rc" className="form-label">Registre de commerce</label>
-                <input
-                  id="edit-rc"
-                  type="text"
-                  placeholder="Ex: RC123456"
-                  value={formData.rc}
-                  onChange={(e) => handleInputChange("rc", e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-ville_rc" className="form-label">Ville RC</label>
-                <select
-                  id="edit-ville_rc"
-                  value={formData.ville_rc}
-                  onChange={(e) => handleInputChange("ville_rc", e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Sélectionner une ville</option>
-                  <option value="Casablanca">Casablanca</option>
-                  <option value="Rabat">Rabat</option>
-                  <option value="Tanger">Tanger</option>
-                  <option value="Fès">Fès</option>
-                  <option value="Marrakech">Marrakech</option>
-                  <option value="Agadir">Agadir</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-email" className="form-label">Email</label>
-                <input
-                  id="edit-email"
-                  type="email"
-                  placeholder="Ex: contact@fournisseur.ma"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-actif" className="form-label">Statut</label>
-                <select
-                  id="edit-actif"
-                  value={formData.actif}
-                  onChange={(e) => handleInputChange("actif", e.target.value === "true")}
-                  className="form-select"
-                  required
-                >
-                  <option value={true}>Actif</option>
-                  <option value={false}>Inactif</option>
-                </select>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={() => setIsEditDialogOpen(false)}>
-                  Annuler
-                </button>
-                <button type="submit" className="submit-button">
-                  Modifier Fournisseur
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+                            </td>
+                            <td className="font-medium">{fournisseur.code}</td>
+                            <td>{fournisseur.nom}</td>
+                            <td>{fournisseur.email || '-'}</td>
+                            <td>{getStatutBadge(fournisseur.actif)}</td>
+                            <td>
+                              <span className="address-count">
+                                {fournisseur.adresses?.length || 0} adresse(s)
+                              </span>
+                            </td>
+                            <td>  
+                            <div className="action-buttons">  
+                                <button   
+                                className="edit-action-button"  
+                                onClick={() => handleEdit(fournisseur)}  
+                                >  
+                                <Edit className="action-icon" />  
+                                </button>  
+                                <button   
+                                className="add-address-button"  
+                                onClick={() => handleAddAddress(fournisseur)}  
+                                title="Ajouter une adresse"  
+                                >  
+                                Ajouter adresse  
+                                </button>  
+                                <button   
+                                className="delete-action-button"  
+                                onClick={() => handleDelete(fournisseur._id)}  
+                                >  
+                                <Delete className="action-icon" />  
+                                </button>  
+                            </div>  
+                            </td>
+                          </tr>
+                          
+                          {/* Ligne étendue pour les adresses */}
+                          {expandedRows.has(fournisseur._id) && (
+                            <tr className="expanded-row">
+                              <td colSpan="7">
+                                <div className="addresses-section">
+                                  <h4 className="addresses-title">  
+                                    <Location className="location-icon" />  
+                                    Adresses du fournisseur  
+                                  </h4>  
+                                    
+                                  {fournisseur.adresses && fournisseur.adresses.length > 0 ? (  
+                                    <div className="addresses-list">  
+                                      {fournisseur.adresses.map((adresse) => (  
+                                        <div key={adresse._id} className="address-item">  
+                                          <div className="address-info">  
+                                            <div className="address-main">  
+                                              <span className="address-text">{adresse.adresse}</span>  
+                                              <span className="address-city">{adresse.ville_id?.name}</span>  
+                                              {adresse.code_postal && (  
+                                                <span className="address-postal">{adresse.code_postal}</span>  
+                                              )}  
+                                            </div>  
+                                            <div className="address-meta">  
+                                              <span className="address-type">{adresse.type_adresse}</span>  
+                                              {adresse.is_principal && (  
+                                                <span className="address-principal">Principal</span>  
+                                              )}  
+                                            </div>  
+                                          </div>  
+                                          <div className="address-actions">  
+                                            <button   
+                                              className="edit-address-button"  
+                                              title="Modifier l'adresse"  
+                                            >  
+                                              <Edit className="action-icon" />  
+                                            </button>  
+                                            <button   
+                                              className="delete-address-button"  
+                                              title="Supprimer l'adresse"  
+                                            >  
+                                              <Delete className="action-icon" />  
+                                            </button>  
+                                          </div>  
+                                        </div>  
+                                      ))}  
+                                    </div>  
+                                  ) : (  
+                                    <div className="no-addresses">  
+                                      <p>Aucune adresse enregistrée pour ce fournisseur.</p>  
+                                      <button   
+                                        className="add-first-address-button"  
+                                        onClick={() => handleAddAddress(fournisseur)}  
+                                      >  
+                                        <Plus className="button-icon" />  
+                                        Ajouter la première adresse  
+                                      </button>  
+                                    </div>  
+                                  )}  
+                                </div>  
+                              </td>  
+                            </tr>  
+                          )}  
+                        </>  
+                      ))}  
+                    </tbody>  
+                  </table>  
+                  {filteredFournisseurs.length === 0 && (  
+                    <div className="no-results">  
+                      Aucun fournisseur trouvé pour votre recherche.  
+                    </div>  
+                  )}  
+                </div>  
+              </div>  
+            </div>  
+          </div>  
+        </div>  
+      </div>  
+  
+      {/* Modal pour ajouter un fournisseur */}  
+      {isAddDialogOpen && (  
+        <div className="modal-overlay" onClick={() => setIsAddDialogOpen(false)}>  
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>  
+            <div className="modal-header">  
+              <h2 className="modal-title">Ajouter Fournisseur</h2>  
+              <button className="modal-close" onClick={() => setIsAddDialogOpen(false)}>  
+                <X className="close-icon" />  
+              </button>  
+            </div>  
+                  
+            <form onSubmit={handleAddSubmit} className="modal-form">  
+              <div className="form-group">  
+                <label htmlFor="code" className="form-label">Code fournisseur</label>  
+                <input  
+                  id="code"  
+                  type="text"  
+                  placeholder="Ex: FRS001"  
+                  value={formData.code}  
+                  onChange={(e) => handleInputChange("code", e.target.value)}  
+                  className="form-input"  
+                  required  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="nom" className="form-label">Nom du fournisseur</label>  
+                <input  
+                  id="nom"  
+                  type="text"  
+                  placeholder="Ex: Société ABC"  
+                  value={formData.nom}  
+                  onChange={(e) => handleInputChange("nom", e.target.value)}  
+                  className="form-input"  
+                  required  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="ice" className="form-label">ICE</label>  
+                <input  
+                  id="ice"  
+                  type="text"  
+                  placeholder="Ex: 123456789000123"  
+                  value={formData.ice}  
+                  onChange={(e) => handleInputChange("ice", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="rc" className="form-label">Registre de commerce</label>  
+                <input  
+                  id="rc"  
+                  type="text"  
+                  placeholder="Ex: RC123456"  
+                  value={formData.rc}  
+                  onChange={(e) => handleInputChange("rc", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="ville_rc" className="form-label">Ville RC</label>  
+                <input  
+                  id="ville_rc"  
+                  type="text"  
+                  placeholder="Ex: Casablanca"  
+                  value={formData.ville_rc}  
+                  onChange={(e) => handleInputChange("ville_rc", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="email" className="form-label">Email</label>  
+                <input  
+                  id="email"  
+                  type="email"  
+                  placeholder="Ex: contact@fournisseur.ma"  
+                  value={formData.email}  
+                  onChange={(e) => handleInputChange("email", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="modal-actions">  
+                <button type="button" className="cancel-button" onClick={() => setIsAddDialogOpen(false)}>  
+                  Annuler  
+                </button>  
+                <button type="submit" className="submit-button">  
+                  Ajouter Fournisseur  
+                </button>  
+              </div>  
+            </form>  
+          </div>  
+        </div>  
+      )}  
+  
+      {/* Modal pour modifier un fournisseur */}  
+      {isEditDialogOpen && (  
+        <div className="modal-overlay" onClick={() => setIsEditDialogOpen(false)}>  
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>  
+            <div className="modal-header">  
+              <h2 className="modal-title">Modifier Fournisseur</h2>  
+              <button className="modal-close" onClick={() => setIsEditDialogOpen(false)}>  
+                <X className="close-icon" />  
+              </button>  
+            </div>  
+                  
+            <form onSubmit={handleEditSubmit} className="modal-form">  
+              <div className="form-group">  
+                <label htmlFor="edit-code" className="form-label">Code fournisseur</label>  
+                <input  
+                  id="edit-code"  
+                  type="text"  
+                  placeholder="Ex: FRS001"  
+                  value={formData.code}  
+                  onChange={(e) => handleInputChange("code", e.target.value)}  
+                  className="form-input"  
+                  required  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="edit-nom" className="form-label">Nom du fournisseur</label>  
+                <input  
+                  id="edit-nom"  
+                  type="text"  
+                  placeholder="Ex: Société ABC"  
+                  value={formData.nom}  
+                  onChange={(e) => handleInputChange("nom", e.target.value)}  
+                  className="form-input"  
+                  required  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="edit-ice" className="form-label">ICE</label>  
+                <input  
+                  id="edit-ice"  
+                  type="text"  
+                  placeholder="Ex: 123456789000123"  
+                  value={formData.ice}  
+                  onChange={(e) => handleInputChange("ice", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="edit-rc" className="form-label">Registre de commerce</label>  
+                <input  
+                  id="edit-rc"  
+                  type="text"  
+                  placeholder="Ex: RC123456"  
+                  value={formData.rc}  
+                  onChange={(e) => handleInputChange("rc", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="edit-ville_rc" className="form-label">Ville RC</label>  
+                <input  
+                  id="edit-ville_rc"  
+                  type="text"  
+                  placeholder="Ex: Casablanca"  
+                  value={formData.ville_rc}  
+                  onChange={(e) => handleInputChange("ville_rc", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="edit-email" className="form-label">Email</label>  
+                <input  
+                  id="edit-email"  
+                  type="email"  
+                  placeholder="Ex: contact@fournisseur.ma"  
+                  value={formData.email}  
+                  onChange={(e) => handleInputChange("email", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="edit-actif" className="form-label">Statut</label>  
+                <select  
+                  id="edit-actif"  
+                  value={formData.actif}  
+                  onChange={(e) => handleInputChange("actif", e.target.value === "true")}  
+                  className="form-select"  
+                  required  
+                >  
+                  <option value={true}>Actif</option>  
+                  <option value={false}>Inactif</option>  
+                </select>  
+              </div>  
+  
+              <div className="modal-actions">  
+                <button type="button" className="cancel-button" onClick={() => setIsEditDialogOpen(false)}>  
+                  Annuler  
+                </button>  
+                <button type="submit" className="submit-button">  
+                  Modifier Fournisseur  
+                </button>  
+              </div>  
+            </form>  
+          </div>  
+        </div>  
+      )}  
+  
+      {/* Modal pour ajouter une adresse */}  
+      {isAddressDialogOpen && (  
+        <div className="modal-overlay" onClick={() => setIsAddressDialogOpen(false)}>  
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>  
+            <div className="modal-header">  
+              <h2 className="modal-title">  
+                Ajouter une adresse - {selectedFournisseur?.nom}  
+              </h2>  
+              <button className="modal-close" onClick={() => setIsAddressDialogOpen(false)}>  
+                <X className="close-icon" />  
+              </button>  
+            </div>  
+                  
+            <form onSubmit={handleAddressSubmit} className="modal-form">  
+              <div className="form-group">  
+                <label htmlFor="adresse" className="form-label">Adresse</label>  
+                <input  
+                  id="adresse"  
+                  type="text"  
+                  placeholder="Ex: 123 Rue Mohammed V"  
+                  value={addressFormData.adresse}  
+                  onChange={(e) => handleAddressInputChange("adresse", e.target.value)}  
+                  className="form-input"  
+                  required  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="ville_id" className="form-label">Ville</label>  
+                <select  
+                  id="ville_id"  
+                  value={addressFormData.ville_id}  
+                  onChange={(e) => handleAddressInputChange("ville_id", e.target.value)}  
+                  className="form-select"  
+                  disabled={loadingCities}  
+                  required  
+                >  
+                  <option value="">Sélectionner une ville</option>  
+                  {cities.map(city => (  
+                    <option key={city._id} value={city._id}>  
+                      {city.name}  
+                    </option>  
+                  ))}  
+                </select>  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="code_postal" className="form-label">Code postal</label>  
+                <input  
+                  id="code_postal"  
+                  type="text"  
+                  placeholder="Ex: 20000"  
+                  value={addressFormData.code_postal}  
+                  onChange={(e) => handleAddressInputChange("code_postal", e.target.value)}  
+                  className="form-input"  
+                />  
+              </div>  
+  
+              <div className="form-group">  
+                <label htmlFor="type_adresse" className="form-label">Type d'adresse</label>  
+                <select  
+                  id="type_adresse"  
+                  value={addressFormData.type_adresse}  
+                  onChange={(e) => handleAddressInputChange("type_adresse", e.target.value)}  
+                  className="form-select"  
+                  required  
+                >  
+                  <option value="SIÈGE SOCIAL">Siège social</option>  
+                  <option value="ENTREPÔT">Entrepôt</option>  
+                  <option value="BUREAU">Bureau</option>  
+                  <option value="AUTRE">Autre</option>  
+                </select>  
+              </div>  
+  
+              <div className="form-group">  
+                <label className="checkbox-label">  
+                  <input  
+                    type="checkbox"  
+                    checked={addressFormData.is_principal}  
+                    onChange={(e) => handleAddressInputChange("is_principal", e.target.checked)}  
+                    className="form-checkbox"  
+                  />  
+                  Adresse principale  
+                </label>  
+              </div>  
+  
+              <div className="modal-actions">  
+                <button type="button" className="cancel-button" onClick={() => setIsAddressDialogOpen(false)}>  
+                  Annuler  
+                </button>  
+                <button type="submit" className="submit-button">  
+                    Ajouter Adresse  
+                </button> 
+              </div>  
+            </form>  
+          </div>  
+        </div>  
+      )}  
+    </div>  
+  )  
 }

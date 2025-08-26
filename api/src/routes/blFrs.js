@@ -18,7 +18,10 @@ const upload = multer({
 });  
   
 // Routes CRUD pour les bons de livraison  
-router.post('/', upload.single('attachment'), blFrsController.createBLFRS);  
+router.post('/', upload.single('attachment'), (req, res, next) => {  
+  console.log('Route BLFRS POST hit:', req.url);  
+  next();  
+}, blFrsController.createBLFRS);
 router.get('/', blFrsController.getAllBLFRS);  
 router.get('/:id', blFrsController.getBLFRSById);  
 router.put('/:id/validate', blFrsController.validateBLFRS);  

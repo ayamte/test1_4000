@@ -734,3 +734,22 @@
     border: 1px solid #000;  
   }  
 }
+
+.add-address-button {  
+  display: flex;  
+  align-items: center;  
+  gap: 0.25rem;  
+  background-color: var(--success-color, #10b981);  
+  color: var(--white);  
+  border: none;  
+  border-radius: var(--border-radius);  
+  padding: 0.5rem 0.75rem;  
+  font-size: 0.875rem;  
+  font-weight: 500;  
+  cursor: pointer;  
+  transition: background-color 0.2s ease;  
+}  
+  
+.add-address-button:hover {  
+  background-color: var(--success-hover, #059669);  
+}

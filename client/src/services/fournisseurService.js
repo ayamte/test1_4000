@@ -1,6 +1,6 @@
 import axios from 'axios';  
   
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';  
+const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api`;
   
 class FournisseurService {  
   // Créer un nouveau fournisseur  
@@ -52,6 +52,25 @@ class FournisseurService {
       throw this.handleError(error);  
     }  
   }  
+
+  async addAdresseFournisseur(fournisseurId, adresseData) {  
+    try {  
+      const response = await axios.post(`${API_BASE_URL}/fournisseurs/${fournisseurId}/adresses`, adresseData);  
+      return response.data;  
+    } catch (error) {  
+      throw this.handleError(error);  
+    }  
+  }  
+    
+  // Récupérer les adresses d'un fournisseur  
+  async getAdressesFournisseur(fournisseurId) {  
+    try {  
+      const response = await axios.get(`${API_BASE_URL}/fournisseurs/${fournisseurId}/adresses`);  
+      return response.data;  
+    } catch (error) {  
+      throw this.handleError(error);  
+    }  
+  }
   
   // Gestion des erreurs  
   handleError(error) {  

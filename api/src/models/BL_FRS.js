@@ -18,12 +18,12 @@ const BLFRSSchema = new mongoose.Schema({
   livreur_employee_id: {   
     type: mongoose.Schema.Types.ObjectId,   
     ref: 'Employe',   
-    required: true   
+    required: false    
   },  
   magasin_employee_id: {   
     type: mongoose.Schema.Types.ObjectId,   
     ref: 'Employe',   
-    required: true   
+    required: false    
   },  
   statut: {   
     type: String,   

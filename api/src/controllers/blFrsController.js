@@ -16,6 +16,19 @@ exports.createBLFRS = async (req, res) => {
       lignes // Array des lignes de produits  
     } = req.body;  
   
+    // Parser les lignes si elles sont en format JSON string  
+    let parsedLignes = lignes;  
+    if (typeof lignes === 'string') {  
+      try {  
+        parsedLignes = JSON.parse(lignes);  
+      } catch (parseError) {  
+        return res.status(400).json({   
+          success: false,   
+          error: 'Format des lignes invalide'   
+        });  
+      }  
+    }  
+  
     // Créer le bon de livraison  
     const blFrs = new BLFRS({  
       fournisseur_id,  
@@ -35,13 +48,13 @@ exports.createBLFRS = async (req, res) => {
   
     await blFrs.save();  
   
-    // Créer les lignes de produits  
-    if (lignes && lignes.length > 0) {  
-      const depotEntryLines = lignes.map(ligne => ({  
+    // Créer les lignes de produits avec les lignes parsées  
+    if (parsedLignes && parsedLignes.length > 0) {  
+      const depotEntryLines = parsedLignes.map(ligne => ({  
         ...ligne,  
         bl_frs_id: blFrs._id  
       }));  
-        
+          
       await DepotEntryLine.insertMany(depotEntryLines);  
     }  
   
@@ -49,7 +62,7 @@ exports.createBLFRS = async (req, res) => {
   } catch (error) {  
     res.status(400).json({ success: false, error: error.message });  
   }  
-};  
+};
   
 // Récupérer tous les bons de livraison  
 exports.getAllBLFRS = async (req, res) => {  

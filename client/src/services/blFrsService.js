@@ -1,37 +1,55 @@
 import axios from 'axios';  
   
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';  
+const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api`; 
   
 class BLFRSService {  
   // Créer un nouveau bon de livraison avec fichier  
   async createBLFRS(blFrsData, attachmentFile = null) {  
     try {  
+      console.log('=== Service BLFRS Call ===');  
+      console.log('API_BASE_URL:', API_BASE_URL);  
+      console.log('Full URL:', `${API_BASE_URL}/bl-frs`);  
+      console.log('Data:', blFrsData);  
+      console.log('File:', attachmentFile);  
+        
       const formData = new FormData();  
         
       // Ajouter les données du bon de livraison  
       Object.keys(blFrsData).forEach(key => {  
-        if (key === 'lignes') {  
-          formData.append(key, JSON.stringify(blFrsData[key]));  
-        } else {  
-          formData.append(key, blFrsData[key]);  
+        const value = blFrsData[key];  
+        if (value !== null && value !== undefined) { // Filtrer les valeurs null/undefined  
+          if (key === 'lignes') {  
+            formData.append(key, JSON.stringify(value));  
+          } else {  
+            formData.append(key, value);  
+          }  
         }  
       });  
-  
+    
       // Ajouter le fichier si présent  
       if (attachmentFile) {  
         formData.append('attachment', attachmentFile);  
       }  
-  
+    
+      console.log('FormData entries:');  
+      for (let [key, value] of formData.entries()) {  
+        console.log(key, value);  
+      }  
+    
       const response = await axios.post(`${API_BASE_URL}/bl-frs`, formData, {  
         headers: {  
           'Content-Type': 'multipart/form-data',  
         },  
       });  
+        
+      console.log('Axios response:', response);  
       return response.data;  
     } catch (error) {  
+      console.error('Service error:', error);  
+      console.error('Error response:', error.response);  
       throw this.handleError(error);  
     }  
-  }  
+  }
   
   // Récupérer tous les bons de livraison avec filtres  
   async getAllBLFRS(filters = {}) {  

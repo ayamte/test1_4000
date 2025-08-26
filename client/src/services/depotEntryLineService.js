@@ -1,6 +1,6 @@
 import axios from 'axios';  
   
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';  
+const API_BASE_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api`; 
   
 class DepotEntryLineService {  
   // Ajouter une ligne à un bon de livraison  

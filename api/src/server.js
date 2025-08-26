@@ -693,34 +693,41 @@ app.post('/api/customers/company', authenticateToken, async (req, res) => {
 // GET - Récupérer tous les employés            
 app.get('/api/employees', authenticateToken, async (req, res) => {            
   try {            
-    const employees = await Employe.find({})            
-      .populate({            
-        path: 'physical_user_id',            
-        populate: [  
-          {  
-            path: 'user_id',            
-            select: 'email statut'            
-          }
-        ]  
-      });            
+    const employees = await Employe.find({})              
+      .populate({              
+        path: 'physical_user_id',              
+        populate: [    
+          {    
+            path: 'user_id',              
+            select: 'email statut'              
+          }  
+        ]    
+      })  
+      .populate('depot_id', 'short_name reference');           
             
-    const employeesData = employees.map(emp => ({            
-      id: emp._id,            
-      matricule: emp.matricule,            
-      fonction: emp.fonction,        
-      cin: emp.cin,           
-      cnss: emp.cnss,      
-      date_embauche: emp.date_embauche,            
-      statut: emp.statut,            
-      user_info: {            
-        id: emp.physical_user_id.user_id._id,            
-        email: emp.physical_user_id.user_id.email,            
-        statut: emp.physical_user_id.user_id.statut,            
-        first_name: emp.physical_user_id.first_name,            
-        last_name: emp.physical_user_id.last_name,            
-        civilite: emp.physical_user_id.civilite,            
-        telephone_principal: emp.physical_user_id.telephone_principal}
-    }));            
+    const employeesData = employees.map(emp => ({              
+      id: emp._id,              
+      matricule: emp.matricule,              
+      fonction: emp.fonction,          
+      cin: emp.cin,             
+      cnss: emp.cnss,        
+      date_embauche: emp.date_embauche,              
+      statut: emp.statut,  
+      depot_id: emp.depot_id?._id,  
+      depot_info: emp.depot_id ? {  
+        short_name: emp.depot_id.short_name,  
+        reference: emp.depot_id.reference  
+      } : null,  
+      user_info: {              
+        id: emp.physical_user_id.user_id._id,              
+        email: emp.physical_user_id.user_id.email,              
+        statut: emp.physical_user_id.user_id.statut,              
+        first_name: emp.physical_user_id.first_name,              
+        last_name: emp.physical_user_id.last_name,              
+        civilite: emp.physical_user_id.civilite,              
+        telephone_principal: emp.physical_user_id.telephone_principal  
+      }  
+    }));           
             
     res.json({            
       success: true,            
@@ -801,15 +808,16 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
     const savedPhysical = await physicalUser.save();            
             
     // Créer l'employé avec tous les champs            
-    const employee = new Employe({              
-      physical_user_id: savedPhysical._id,              
-      matricule: `EMP${(Date.now()).toString().padStart(6, '0')}`,          
-      cin: profile.cin,            
-      cnss: profile.cnss,          
-      fonction,              
-      date_embauche: new Date(),              
-      statut: statut || 'ACTIF'        
-    });        
+    const employee = new Employe({                
+      physical_user_id: savedPhysical._id,                
+      matricule: `EMP${(Date.now()).toString().padStart(6, '0')}`,            
+      cin: profile.cin,              
+      cnss: profile.cnss,            
+      fonction,                
+      date_embauche: new Date(),                
+      statut: statut || 'ACTIF',  
+      depot_id: req.body.depot_id || null // Ajouter cette ligne  
+    });       
             
     const savedEmployee = await employee.save();            
     const populatedEmployee = await Employe.findById(savedEmployee._id)            
@@ -843,7 +851,8 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
     if (fonction) employee.fonction = fonction;                
     if (statut !== undefined) employee.statut = statut;            
     if (profile.cin !== undefined) employee.cin = profile.cin;            
-    if (profile.cnss !== undefined) employee.cnss = profile.cnss;            
+    if (profile.cnss !== undefined) employee.cnss = profile.cnss;         
+    if (req.body.depot_id !== undefined) employee.depot_id = req.body.depot_id;    
     await employee.save();               
                 
     // Mettre à jour l'email dans User si fourni            

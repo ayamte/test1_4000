@@ -16,7 +16,6 @@ import {
 import "./gestionCamion.css"  
 import truckService from '../../../services/truckService' 
 import { employeeService } from '../../../services/employeeService'
-import SidebarNavigation from '../../../components/admin/Sidebar/Sidebar'
 
 export default function TruckManagement() {  
   const navigate = useNavigate()    
@@ -261,7 +260,7 @@ export default function TruckManagement() {
     
   return (    
     <div className="truck-management-layout">
-      <SidebarNavigation />    
+  
       <div className="truck-management-wrapper">    
         <div className="truck-management-container">    
           <div className="truck-management-content">    

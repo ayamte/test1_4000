@@ -6,12 +6,7 @@ const FournisseurSchema = new mongoose.Schema({
   ice: { type: String, unique: true, sparse: true },  
   rc: String,  
   ville_rc: String,  
-  email: String,  
-  // Relation avec les adresses  
-  addresses: [{   
-    type: mongoose.Schema.Types.ObjectId,   
-    ref: 'Address'   
-  }],  
+  email: String,   
   actif: { type: Boolean, default: true },  
 }, { timestamps: true });  
   
