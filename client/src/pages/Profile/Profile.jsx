@@ -106,113 +106,54 @@ export default function Profile() {
     }    
   };    
   
-const loadAddresses = async () => {      
-  try {      
-    setLoadingAddresses(true);      
-    setError('');      
-          
-    const currentUser = authService.getUser();    
-        
-    // Récupérer le customer_id depuis le profil utilisateur    
-    let customerId = currentUser?.customer_id;    
-        
-    // Si pas de customer_id dans les données locales, le récupérer via l'API profile    
-    if (!customerId) {    
-      const token = authService.getToken();    
-      const profileResponse = await fetch(`${API_BASE_URL}/api/users/profile`, {    
-        headers: {    
-          'Authorization': `Bearer ${token}`,    
-          'Content-Type': 'application/json'    
-        }    
-      });    
-          
-      if (profileResponse.ok) {    
-        const profileData = await profileResponse.json();    
-            
-        console.log("📊 Structure complète profileData:", profileData);      
-        console.log("🏢 Type d'utilisateur:", profileData.data?.customer_info?.type_client);      
-            
-        // CORRECTION: Chercher le Customer par user_id dans la liste des customers  
-        if (profileData.data?.customer_info) {    
-          const customerResponse = await fetch(`${API_BASE_URL}/api/customers`, {    
-            headers: {    
-              'Authorization': `Bearer ${token}`,    
-              'Content-Type': 'application/json'    
-            }    
-          });    
-              
-          if (customerResponse.ok) {    
-            const customersData = await customerResponse.json();    
-            console.log("📊 Données customers reçues:", customersData);  
-              
-            // Trouver le customer qui correspond à cet utilisateur  
-            const customer = customersData.data?.find(c => {  
-              // Pour les entreprises (MORAL)  
-              if (c.type_client === 'MORAL' && c.user_info?.id === profileData.data.id) {  
-                return true;  
-              }  
-              // Pour les particuliers (PHYSIQUE)    
-              if (c.type_client === 'PHYSIQUE' && c.user_info?.id === profileData.data.id) {  
-                return true;  
-              }  
-              return false;  
-            });  
-                
-            if (customer) {    
-              customerId = customer.id; // Utiliser customer.id au lieu de customer._id  
-              console.log("✅ Customer trouvé:", customer);  
-            } else {  
-              console.log("❌ Aucun customer trouvé pour l'utilisateur:", profileData.data.id);  
-            }  
-          }    
-        }    
-            
-        console.log("🆔 Customer ID trouvé:", customerId);    
-            
-        // Mettre à jour les données utilisateur locales avec le customer_id    
-        if (customerId && currentUser) {    
-          const updatedUser = { ...currentUser, customer_id: customerId };    
-          authService.setUser(updatedUser);    
-          setUser(updatedUser);    
-        }    
-      }    
-    }    
-          
-    if (!customerId) {      
-      setError('Informations client non disponibles. Veuillez contacter l\'administrateur.');      
-      return;      
-    }      
-          
-    // Appel direct à l'API addresses avec le bon endpoint    
-    const token = authService.getToken();    
-    const response = await fetch(`${API_BASE_URL}/api/customer/${customerId}/addresses`, {      
-      method: 'GET',    
-      headers: {     
-        'Authorization': `Bearer ${token}`,    
-        'Content-Type': 'application/json'    
-      }      
-    });      
-    
-    if (response.status === 401) {      
-      authService.logout();      
-      return;      
-    }    
-          
-    const data = await response.json();    
-    console.log('Réponse API addresses:', data);    
-        
-    if (data.success) {      
-      setAddresses(data.addresses || []);      
-    } else {    
-      console.log('Erreur API:', data.message);    
-      setError(data.message || 'Erreur lors du chargement des adresses');    
-    }    
-  } catch (err) {      
-    setError('Erreur de connexion lors du chargement des adresses');      
-    console.error('Erreur loadAddresses:', err);    
-  } finally {      
-    setLoadingAddresses(false);      
-  }      
+const loadAddresses = async () => {  
+  try {  
+    setLoadingAddresses(true);  
+    setError('');  
+      
+    const token = authService.getToken();  
+      
+    // Récupérer le profil complet avec customer_id  
+    const profileResponse = await fetch(`${API_BASE_URL}/api/users/profile`, {  
+      headers: {  
+        'Authorization': `Bearer ${token}`,  
+        'Content-Type': 'application/json'  
+      }  
+    });  
+      
+    if (!profileResponse.ok) {  
+      throw new Error('Erreur lors de la récupération du profil');  
+    }  
+      
+    const profileData = await profileResponse.json();  
+    const customerId = profileData.data?.customer_info?.customer_id;  
+      
+    if (!customerId) {  
+      setError('Informations client non disponibles. Veuillez contacter l\'administrateur.');  
+      return;  
+    }  
+      
+    // Récupérer les adresses avec le customer_id correct  
+    const response = await fetch(`${API_BASE_URL}/api/customer/${customerId}/addresses`, {  
+      headers: {  
+        'Authorization': `Bearer ${token}`,  
+        'Content-Type': 'application/json'  
+      }  
+    });  
+      
+    const data = await response.json();  
+      
+    if (data.success) {  
+      setAddresses(data.addresses || []);  
+    } else {  
+      setError(data.message || 'Erreur lors du chargement des adresses');  
+    }  
+  } catch (err) {  
+    setError('Erreur de connexion lors du chargement des adresses');  
+    console.error('Erreur loadAddresses:', err);  
+  } finally {  
+    setLoadingAddresses(false);  
+  }  
 };
 
   const loadCities = async () => {
@@ -274,17 +215,17 @@ const loadAddresses = async () => {
       let customerId = currentUser?.customer_id;
 
       if (!customerId) {
-        const profileResponse = await fetch(`${API_BASE_URL}/api/users/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+       const profileResponse = await fetch(`${API_BASE_URL}/api/users/profile`, {  
+        headers: {  
+          'Authorization': `Bearer ${token}`,  
+          'Content-Type': 'application/json'  
+        }  
+      });  
         
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          customerId = profileData.data?.customer_info?.customer_id;
-        }
+      if (profileResponse.ok) {  
+        const profileData = await profileResponse.json();  
+        customerId = profileData.data?.customer_info?.customer_id;  
+      }
       }
 
       if (!customerId) {
