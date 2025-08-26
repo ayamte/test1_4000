@@ -38,6 +38,11 @@ const menuItems = [
   }, 
   {    
     icon: Users,    
+    label: "Gestion des fournisseurs",    
+    href: "/gestion-fournisseur",    
+  }, 
+  {    
+    icon: Users,    
     label: "Gestion des employés",    
     href: "/gestion-chauffeur",    
   },    

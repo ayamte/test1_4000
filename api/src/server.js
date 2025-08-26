@@ -49,6 +49,10 @@ const stockLineRoutes = require('./routes/stockLines');
 const productRoutes = require('./routes/products');  
 const umRoutes = require('./routes/ums'); 
 
+const fournisseurRoutes = require('./routes/fournisseur');  
+const blFrsRoutes = require('./routes/blFrs');  
+const depotEntryLineRoutes = require('./routes/depotEntryLine');
+
 // Import du middleware d'authentification    
 const { authenticateToken } = require('./middleware/authMiddleware');    
 const setupWebSocket = require('./middleware/websocket');
@@ -114,6 +118,10 @@ app.use('/api/stock-lines', stockLineRoutes);
 app.use('/api/products', productRoutes);  
 app.use('/api/ums', umRoutes);
 app.use('/api/admin', adminRoutes);  
+
+app.use('/api/fournisseurs', fournisseurRoutes);  
+app.use('/api/bl-frs', blFrsRoutes);  
+app.use('/api/depot-entry-lines', depotEntryLineRoutes);
 
 // Initialisation Passport
 app.use(passport.initialize());  
